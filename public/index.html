@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TODAYLBUM — Daily Music</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d0d;
+      --surface:  #161616;
+      --surface2: #1f1f1f;
+      --border:   #2a2a2a;
+      --amber:    #e8a020;
+      --amber-dim:#7a4f08;
+      --cream:    #f0e8d8;
+      --muted:    #787060;
+      --red:      #c94040;
+      --green:    #4caf7a;
+    }
+
+    /* ─── LOADING BANNER ─── */
+    .loading-banner {
+      background: rgba(232,160,32,0.1);
+      border-bottom: 1px solid var(--amber-dim);
+      padding: 0.7rem 3rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--amber);
+      display: none;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .loading-banner.show { display: flex; }
+    .loading-banner .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid var(--amber-dim);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.4rem 3rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+      background: rgba(13,13,13,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem; font-weight: 900;
+      letter-spacing: -0.02em; color: var(--cream);
+    }
+    .logo span { color: var(--amber); }
+    nav { display: flex; gap: 2rem; }
+    nav a {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted);
+      text-decoration: none; transition: color 0.2s;
+    }
+    nav a:hover, nav a.active { color: var(--cream); }
+    .date-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.08em;
+      color: var(--muted); border: 1px solid var(--border);
+      padding: 0.35rem 0.8rem; border-radius: 2rem;
+    }
+
+    /* ─── LAYOUT ─── */
+    main { max-width: 1280px; margin: 0 auto; padding: 0 3rem 6rem; }
+    section { padding-top: 4rem; }
+
+    .sec-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--amber);
+      margin-bottom: 0.6rem;
+    }
+    .sec-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem; font-weight: 700;
+      line-height: 1.15; color: var(--cream);
+      margin-bottom: 2rem;
+    }
+
+    /* ─── SKELETON LOADER ─── */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+
+    /* ─── TODAY HERO ─── */
+    .today-hero {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 3rem; align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 2.5rem;
+      position: relative; overflow: hidden;
+    }
+    .today-hero::before {
+      content: '';
+      position: absolute; top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(232,160,32,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cover-wrap { position: relative; width: 260px; height: 260px; flex-shrink: 0; }
+    .cover-placeholder {
+      width: 100%; height: 100%;
+      background: linear-gradient(135deg, #2a2a1a 0%, #1a1a0d 100%);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 5rem; overflow: hidden;
+    }
+    .cover-placeholder img {
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 4px;
+      position: absolute; inset: 0;
+    }
+    .today-badge {
+      position: absolute; top: -10px; left: -10px;
+      background: var(--amber); color: #000;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.15em;
+      text-transform: uppercase; font-weight: 500;
+      padding: 0.3rem 0.7rem; border-radius: 2px;
+    }
+    .today-info { display: flex; flex-direction: column; gap: 0.9rem; }
+    .today-type {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .today-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem; font-weight: 900;
+      line-height: 1.05; color: var(--cream);
+    }
+    .today-artist {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem; font-style: italic; color: var(--amber);
+    }
+    .today-meta {
+      display: flex; gap: 1.5rem; flex-wrap: wrap;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em;
+    }
+    .genre-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .genre-tag {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      padding: 0.22rem 0.55rem; border-radius: 2px; text-transform: uppercase;
+    }
+    .rating-display { display: flex; align-items: baseline; gap: 0.8rem; }
+    .rating-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5rem; font-weight: 900; color: var(--amber); line-height: 1;
+    }
+    .rating-max { font-family: 'DM Mono', monospace; font-size: 1rem; color: var(--muted); }
+    .rating-votes { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+
+    /* ─── STAR WIDGET ─── */
+    .star-widget { margin-top: 0.3rem; }
+    .star-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
+    }
+    .stars { display: flex; gap: 0.35rem; }
+    .star {
+      font-size: 1.6rem; cursor: pointer;
+      color: var(--border);
+      transition: color 0.12s, transform 0.08s;
+      user-select: none; line-height: 1;
+    }
+    .star.hovered, .star.filled { color: var(--amber); }
+    .star.hovered { transform: scale(1.15); }
+    .star.disabled { cursor: not-allowed; opacity: 0.45; }
+    .voted-msg {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; color: var(--green);
+      letter-spacing: 0.08em; margin-top: 0.4rem; display: none;
+    }
+    .voted-msg.show { display: block; }
+
+    /* ─── CARDS GRID ─── */
+    .today-list-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem; margin-top: 1.5rem;
+    }
+    .release-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 1rem; cursor: pointer;
+      transition: border-color 0.2s, transform 0.18s;
+      position: relative;
+    }
+    .release-card:hover { border-color: var(--amber-dim); transform: translateY(-2px); }
+    .release-card.top-pick { border-color: var(--amber); }
+    .card-cover-placeholder {
+      width: 100%; aspect-ratio: 1; border-radius: 3px;
+      margin-bottom: 0.8rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; position: relative; overflow: hidden;
+      background: linear-gradient(135deg, var(--surface2), var(--border));
+    }
+    .card-cover-placeholder img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover; border-radius: 3px;
+    }
+    .card-type {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem;
+    }
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem; font-weight: 700;
+      color: var(--cream); margin-bottom: 0.15rem; line-height: 1.25;
+    }
+    .card-artist { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+    .card-rating { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.6rem; }
+    .card-score { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--amber); }
+    .card-votes { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+    .mini-stars { display: flex; gap: 2px; font-size: 0.7rem; }
+    .top-badge {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--amber); color: #000;
+      font-family: 'DM Mono', monospace; font-size: 0.55rem;
+      letter-spacing: 0.1em; padding: 0.2rem 0.5rem;
+      border-radius: 2px; text-transform: uppercase;
+    }
+
+    /* ─── CALENDAR ─── */
+    .calendar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .month-nav { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--cream); width: 36px; height: 36px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1rem; transition: border-color 0.2s, background 0.2s;
+    }
+    .nav-btn:hover { border-color: var(--amber); background: var(--surface2); }
+    .month-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      text-align: center; padding: 0.5rem 0;
+    }
+    .cal-day {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; min-height: 72px; padding: 0.5rem;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .cal-day:hover { border-color: var(--amber-dim); background: var(--surface2); }
+    .cal-day.empty { background: transparent; border-color: transparent; cursor: default; }
+    .cal-day.today { border-color: var(--amber); }
+    .cal-day.selected { border-color: var(--amber); background: rgba(232,160,32,0.07); }
+    .cal-day.has-releases { border-color: #3a3a2a; }
+    .day-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem;
+    }
+    .cal-day.today .day-num { color: var(--amber); font-weight: 500; }
+    .release-dot {
+      width: 5px; height: 5px;
+      background: var(--amber); border-radius: 50%;
+      display: inline-block; margin: 1px;
+    }
+    .release-dots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
+    .rel-count { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--amber-dim); margin-top: 0.3rem; }
+
+    /* ─── DAY PANEL ─── */
+    .day-panel {
+      margin-top: 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden;
+      animation: slideDown 0.22s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .day-panel-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .day-panel-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; }
+    .close-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 1.2rem; transition: color 0.2s;
+    }
+    .close-btn:hover { color: var(--cream); }
+    .day-panel-list { padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .panel-release {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; transition: border-color 0.2s;
+    }
+    .panel-release:hover { border-color: var(--amber-dim); }
+    .panel-cover-placeholder {
+      width: 52px; height: 52px; border-radius: 3px; flex-shrink: 0;
+      background: var(--border); position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+    }
+    .panel-cover-placeholder img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover; border-radius: 3px;
+    }
+    .panel-info { flex: 1; min-width: 0; }
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .panel-artist { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); }
+    .panel-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+    .panel-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--cream); padding: 0.3rem 0.8rem;
+      border-radius: 3px; font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; letter-spacing: 0.1em; cursor: pointer;
+      text-transform: uppercase; transition: border-color 0.2s;
+    }
+    .panel-btn:hover { border-color: var(--amber); }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(8px); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.22s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; width: 90vw; max-width: 520px;
+      padding: 2rem;
+      transform: translateY(16px); transition: transform 0.22s;
+      position: relative;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 1.3rem;
+    }
+    .modal-cover-placeholder {
+      width: 110px; height: 110px; border-radius: 4px;
+      background: var(--surface2); position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.8rem; margin-bottom: 1rem;
+    }
+    .modal-cover-placeholder img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover; border-radius: 4px;
+    }
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem; font-weight: 900; margin-bottom: 0.2rem;
+    }
+    .modal-artist {
+      font-family: 'Playfair Display', serif;
+      font-style: italic; color: var(--amber); margin-bottom: 0.8rem;
+    }
+    .modal-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+    .modal-divider { height: 1px; background: var(--border); margin: 1.2rem 0; }
+    .modal-star-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
+    }
+    .modal-stars .stars { gap: 0.5rem; }
+    .modal-stars .star { font-size: 2.2rem; }
+    .submit-btn {
+      margin-top: 1rem; background: var(--amber); color: #000;
+      border: none; padding: 0.7rem 1.8rem; border-radius: 3px;
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .submit-btn:hover { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(10px);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 0.7rem 1.5rem; border-radius: 4px;
+      font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      z-index: 300; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(18px);} to { opacity:1; transform:translateY(0);} }
+    .fade-up   { animation: fadeUp 0.45s ease both; }
+    .fade-up-2 { animation: fadeUp 0.45s 0.1s ease both; }
+    .fade-up-3 { animation: fadeUp 0.45s 0.2s ease both; }
+
+    .divider { height: 1px; background: var(--border); margin: 3rem 0 0; }
+
+    /* ─── ADMIN ─── */
+    .admin-toggle {
+      font-family: 'DM Mono', monospace; font-size: 0.65rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); background: none; border: 1px solid var(--border);
+      padding: 0.4rem 0.9rem; border-radius: 3px;
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .admin-toggle:hover { border-color: var(--amber); color: var(--cream); }
+    .admin-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 1.5rem; margin-top: 3rem;
+      display: none;
+    }
+    .admin-panel.open { display: block; animation: slideDown 0.22s ease; }
+    .admin-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem; font-weight: 700; margin-bottom: 1.2rem;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .form-field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .form-input, .form-select {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--cream); padding: 0.5rem 0.75rem;
+      border-radius: 3px; font-family: 'DM Mono', monospace;
+      font-size: 0.78rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--amber); }
+    .form-select option { background: var(--surface2); }
+    .form-submit {
+      background: var(--amber); color: #000; border: none;
+      padding: 0.6rem 1.5rem; border-radius: 3px;
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer; margin-top: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .form-submit:hover { opacity: 0.85; }
+
+    /* ─── SEARCH SECTION ─── */
+    .search-section { padding-top: 4rem; }
+    .filter-bar {
+      display: flex; gap: 0.6rem; flex-wrap: wrap;
+      align-items: center; margin-bottom: 1.5rem;
+    }
+    .search-input-wrap {
+      position: relative; flex: 1; min-width: 220px;
+    }
+    .search-input-wrap .search-icon {
+      position: absolute; left: 0.8rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted); font-size: 0.9rem; pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--cream); padding: 0.6rem 0.8rem 0.6rem 2.2rem;
+      border-radius: 4px; font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--amber); }
+    .search-input::placeholder { color: var(--muted); }
+    .filter-select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--cream); padding: 0.6rem 0.8rem;
+      border-radius: 4px; font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; outline: none; cursor: pointer;
+      transition: border-color 0.2s; letter-spacing: 0.04em;
+    }
+    .filter-select:focus { border-color: var(--amber); }
+    .filter-select option { background: var(--surface2); }
+    .sort-select {
+      margin-left: auto;
+    }
+    .results-meta {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem;
+      color: var(--muted); letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .clear-btn {
+      background: none; border: none; color: var(--amber);
+      font-family: 'DM Mono', monospace; font-size: 0.65rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer; padding: 0; transition: opacity 0.2s;
+    }
+    .clear-btn:hover { opacity: 0.7; }
+    .search-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .load-more-wrap { text-align: center; margin-top: 2rem; }
+    .load-more-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--cream); padding: 0.65rem 2rem;
+      border-radius: 4px; font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.1em;
+      text-transform: uppercase; cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .load-more-btn:hover { border-color: var(--amber); }
+    .load-more-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .no-results {
+      grid-column: 1 / -1;
+      padding: 3rem; text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em;
+    }
+    footer .logo-sm { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); }
+    footer .logo-sm span { color: var(--amber); }
+
+    @media (max-width: 800px) {
+      header { padding: 1rem 1.5rem; }
+      nav { display: none; }
+      main { padding: 0 1.5rem 4rem; }
+      .today-hero { grid-template-columns: 1fr; gap: 1.5rem; }
+      .cover-wrap { width: 100%; max-width: 260px; height: auto; aspect-ratio: 1; }
+      .today-title { font-size: 2rem; }
+      .form-grid { grid-template-columns: 1fr; }
+      .sync-grid { grid-template-columns: 1fr; }
+      footer { padding: 1.5rem; flex-direction: column; gap: 0.8rem; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING BANNER -->
+<div class="loading-banner" id="loadingBanner">
+  <div class="spinner"></div>
+  <span id="loadingText">Loading real release data from MusicBrainz…</span>
+  <span id="loadingCount" style="color:var(--muted);margin-left:auto;"></span>
+</div>
+
+<header>
+  <div class="logo">TODAY<span>LBUM</span></div>
+  <nav>
+    <a href="#today" class="active">Today</a>
+    <a href="#calendar">Calendar</a>
+    <a href="#search">Browse</a>
+  </nav>
+  <div class="date-badge" id="headerDate">—</div>
+</header>
+
+<main>
+  <!-- ── SONG OF TODAY ── -->
+  <section id="today">
+    <div class="sec-label fade-up">★ Featured</div>
+    <div class="sec-title fade-up-2">Song / Album of Today</div>
+
+    <div class="today-hero fade-up-3" id="todayHero">
+      <div class="cover-wrap">
+        <div class="cover-placeholder skeleton" id="heroCover" style="font-size:0;"></div>
+        <div class="today-badge">Today's Top</div>
+      </div>
+      <div class="today-info">
+        <div class="today-type" id="heroType"></div>
+        <div class="today-title skeleton" id="heroTitle" style="height:3.2rem;width:70%;border-radius:4px;">&nbsp;</div>
+        <div class="today-artist skeleton" id="heroArtist" style="height:1.4rem;width:40%;border-radius:4px;">&nbsp;</div>
+        <div class="today-meta" id="heroMeta"></div>
+        <div class="genre-tags" id="heroTags"></div>
+        <div class="rating-display">
+          <div class="rating-score" id="heroScore">—</div>
+          <div class="rating-max">/10</div>
+          <div class="rating-votes" id="heroVotes"></div>
+        </div>
+        <div class="star-widget" id="heroStarWidget">
+          <div class="star-label">Rate this release</div>
+          <div class="stars" id="heroStars"></div>
+          <div class="voted-msg" id="heroVotedMsg">✓ Your rating has been submitted</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;">All releases today</div>
+      <div class="today-list-grid" id="todayGrid">
+        <div class="release-card"><div class="card-cover-placeholder skeleton" style="font-size:0;"></div><div class="skeleton" style="height:0.8rem;width:60%;margin-bottom:0.4rem;border-radius:3px;"></div><div class="skeleton" style="height:0.7rem;width:40%;border-radius:3px;"></div></div>
+        <div class="release-card"><div class="card-cover-placeholder skeleton" style="font-size:0;"></div><div class="skeleton" style="height:0.8rem;width:60%;margin-bottom:0.4rem;border-radius:3px;"></div><div class="skeleton" style="height:0.7rem;width:40%;border-radius:3px;"></div></div>
+        <div class="release-card"><div class="card-cover-placeholder skeleton" style="font-size:0;"></div><div class="skeleton" style="height:0.8rem;width:60%;margin-bottom:0.4rem;border-radius:3px;"></div><div class="skeleton" style="height:0.7rem;width:40%;border-radius:3px;"></div></div>
+        <div class="release-card"><div class="card-cover-placeholder skeleton" style="font-size:0;"></div><div class="skeleton" style="height:0.8rem;width:60%;margin-bottom:0.4rem;border-radius:3px;"></div><div class="skeleton" style="height:0.7rem;width:40%;border-radius:3px;"></div></div>
+      </div>
+    </div>
+
+    <!-- ADD RELEASE -->
+    <div style="display:flex;justify-content:flex-end;margin-top:2rem;">
+      <button class="admin-toggle" id="adminToggle">+ Add Release</button>
+    </div>
+    <div class="admin-panel" id="adminPanel">
+      <div class="admin-title">Add New Release</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label">Title *</label>
+          <input class="form-input" id="f-title" placeholder="Album or song title" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Artist *</label>
+          <input class="form-input" id="f-artist" placeholder="Artist or band name" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Type *</label>
+          <select class="form-select" id="f-type">
+            <option value="Single">Single</option>
+            <option value="Album">Album</option>
+            <option value="EP">EP</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Release Date *</label>
+          <input class="form-input" id="f-date" type="date" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Genre *</label>
+          <input class="form-input" id="f-genre" placeholder="e.g. Indie Pop" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Tags (comma separated)</label>
+          <input class="form-input" id="f-tags" placeholder="Dream Pop, Synth" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Label</label>
+          <input class="form-input" id="f-label" placeholder="Record label" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Duration</label>
+          <input class="form-input" id="f-duration" placeholder="e.g. 3:45 or 42 min" />
+        </div>
+      </div>
+      <button class="form-submit" id="formSubmit">Add Release</button>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ── CALENDAR ── -->
+  <section id="calendar">
+    <div class="sec-label fade-up">📅 Schedule</div>
+    <div class="sec-title fade-up-2">This Month's Releases</div>
+
+    <div class="calendar-header">
+      <div class="month-nav">
+        <button class="nav-btn" id="prevMonth">&#8592;</button>
+        <div class="month-title" id="monthTitle">—</div>
+        <button class="nav-btn" id="nextMonth">&#8594;</button>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);">
+        <span id="monthTotal">—</span> releases this month
+      </div>
+    </div>
+
+    <div class="cal-grid" id="calGrid"></div>
+    <div id="dayPanel"></div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── SEARCH & FILTER ── -->
+  <section id="search" class="search-section">
+    <div class="sec-label fade-up">🔍 Browse</div>
+    <div class="sec-title fade-up-2">Search Releases</div>
+
+    <div class="filter-bar">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchQ"
+          placeholder="Search by title or artist…" autocomplete="off" />
+      </div>
+      <select class="filter-select" id="filterGenre">
+        <option value="all">All Genres</option>
+      </select>
+      <select class="filter-select" id="filterType">
+        <option value="all">All Types</option>
+        <option value="Album">Album</option>
+        <option value="Single">Single</option>
+        <option value="EP">EP</option>
+      </select>
+      <select class="filter-select" id="filterYear">
+        <option value="">Any Year</option>
+      </select>
+      <select class="filter-select sort-select" id="filterSort">
+        <option value="date_desc">Newest First</option>
+        <option value="date_asc">Oldest First</option>
+        <option value="top_rated">Top Rated</option>
+        <option value="title_asc">A–Z Title</option>
+        <option value="artist_asc">A–Z Artist</option>
+      </select>
+    </div>
+
+    <div class="results-meta" id="resultsMeta" style="display:none;">
+      <span id="resultsCount"></span>
+      <button class="clear-btn" id="clearFilters">✕ Clear filters</button>
+    </div>
+
+    <div class="search-grid" id="searchGrid"></div>
+
+    <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+      <button class="load-more-btn" id="loadMoreBtn">Load more</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="logo-sm">TODAY<span>LBUM</span></div>
+  <div>Community music ratings · Updated daily</div>
+  <div id="footerYear">—</div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-cover-placeholder" id="modalCover">🎵</div>
+    <div class="modal-title" id="modalTitle">—</div>
+    <div class="modal-artist" id="modalArtist">—</div>
+    <div class="modal-meta" id="modalMeta">—</div>
+    <div class="modal-divider"></div>
+    <div class="modal-star-label">Your Rating</div>
+    <div class="modal-stars" id="modalStarSection">
+      <div class="stars" id="modalStars"></div>
+      <div class="voted-msg" id="modalVotedMsg">✓ Thanks! Your rating has been recorded.</div>
+    </div>
+    <div style="margin-top:0.8rem;display:flex;align-items:center;gap:1.5rem;">
+      <button class="submit-btn" id="modalSubmit" disabled>Submit Rating</button>
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--amber);">
+        <span id="modalScore">—</span>/10
+        <span style="color:var(--muted)" id="modalVoteCount"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+//  CONFIG — change if server runs on a different port
+// ─────────────────────────────────────────────────────────────────────────
+const API = 'http://localhost:3000/api';
+
+// ─────────────────────────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────────────────────────
+const TODAY  = new Date();
+const pad    = n => String(n).padStart(2,'0');
+const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayStr = fmtDate(TODAY);
+
+// Voted-releases are stored in localStorage just to keep the UI state
+// The authoritative check is the server (IP hash), but for UX we cache locally
+function markVotedLocally(id)    { const v = getLocalVotes(); v[id]=true; localStorage.setItem('ts_voted',JSON.stringify(v)); }
+function getLocalVotes()         { try { return JSON.parse(localStorage.getItem('ts_voted')||'{}'); } catch { return {}; } }
+function votedLocally(id)        { return !!getLocalVotes()[id]; }
+
+const EMOJI_COVERS = ['🎸','🎹','🥁','🎷','🎺','🎻','🪗','🎤','🎧','🎼','🪘','🎵'];
+function randEmoji(seed) {
+  let h = 0;
+  for (let i=0; i<seed.length; i++) h=(Math.imul(31,h)+seed.charCodeAt(i))|0;
+  return EMOJI_COVERS[Math.abs(h) % EMOJI_COVERS.length];
+}
+
+// Returns the emoji character for a release (used as fallback)
+function coverEmoji(id) { return randEmoji(id); }
+
+// Returns an <img> tag if cover_url exists, otherwise empty string
+// The emoji is always rendered as text behind the img — img hides it when loaded
+function coverImg(coverUrl, id) {
+  if (!coverUrl) return '';
+  return `<img src="${coverUrl}" alt="cover"
+    onerror="this.style.display='none'"
+    loading="lazy" />`;
+}
+function renderMiniStars(score) {
+  const stars = Math.round((score/10)*5);
+  return [...Array(5)].map((_,i)=>`<span style="color:${i<stars?'var(--amber)':'var(--border)'};font-size:0.72rem;">${i<stars?'★':'☆'}</span>`).join('');
+}
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(()=>{ t.classList.remove('show'); }, 3000);
+}
+
+// Generic fetch wrapper
+async function api(path, opts={}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  STAR WIDGET — builds DOM once, updates classes only (never innerHTML='')
+//  Destroying elements on hover swallows click events, so we never do that.
+// ─────────────────────────────────────────────────────────────────────────
+function buildStars(containerId, { size=1.6, onSelect, disabled=false } = {}) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  let hov=0, sel=0;
+
+  const spans = [];
+  for (let i=1; i<=5; i++) {
+    const s = document.createElement('span');
+    s.className = 'star' + (disabled ? ' disabled' : '');
+    s.style.fontSize = size + 'rem';
+    s.textContent = '☆';
+    container.appendChild(s);
+    spans.push(s);
+  }
+
+  function updateDisplay() {
+    const lit = hov || sel;
+    spans.forEach((s, idx) => {
+      const on = idx + 1 <= lit;
+      s.textContent = on ? '★' : '☆';
+      s.classList.toggle('filled', on);
+    });
+  }
+  updateDisplay();
+
+  if (!disabled) {
+    spans.forEach((s, idx) => {
+      const i = idx + 1;
+      s.addEventListener('mouseenter', () => { hov = i; updateDisplay(); });
+      s.addEventListener('click',      () => { sel = i; hov = 0; updateDisplay(); if (onSelect) onSelect(i); });
+    });
+    // mouseleave on container so moving between stars doesn't trigger reset
+    container.addEventListener('mouseleave', () => { hov = 0; updateDisplay(); });
+  }
+
+  return { getSel: () => sel, reset: () => { sel=0; hov=0; updateDisplay(); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  DATE HEADER
+// ─────────────────────────────────────────────────────────────────────────
+document.getElementById('headerDate').textContent =
+  TODAY.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+document.getElementById('footerYear').textContent = `© ${TODAY.getFullYear()} Todaylbum`;
+
+// ─────────────────────────────────────────────────────────────────────────
+//  TODAY SECTION
+// ─────────────────────────────────────────────────────────────────────────
+let todayReleases = [];
+let heroRelease   = null;
+let heroStarWidget;
+
+async function loadTodaySection() {
+  try {
+    [heroRelease, todayReleases] = await Promise.all([
+      api('/releases/top-today').catch(()=>null),
+      api(`/releases?date=${todayStr}`),
+    ]);
+    renderHero();
+    renderTodayGrid();
+  } catch(e) {
+    document.getElementById('todayHero').innerHTML = `
+      <div style="padding:2.5rem;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);line-height:2;">
+        <div style="font-size:2rem;margin-bottom:1rem;">📡</div>
+        <div style="color:var(--cream);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Could not connect to server</div>
+        Make sure the Node.js server is running on port 3000.<br>
+        <span style="color:var(--amber)">npm start</span>
+      </div>`;
+    console.error(e);
+  }
+}
+
+function renderHero() {
+  const r = heroRelease;
+  if (!r) {
+    document.getElementById('todayHero').innerHTML = `
+      <div style="padding:2.5rem;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);line-height:2;">
+        <div style="font-size:2rem;margin-bottom:1rem;">🎵</div>
+        <div style="color:var(--cream);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">No releases today</div>
+        The AI scraper runs every 24h and will populate this automatically.<br>
+        You can also add releases manually using the <span style="color:var(--amber)">+ Add Release</span> button below.
+      </div>`;
+    return;
+  }
+
+  const heroCoverEl = document.getElementById('heroCover');
+  heroCoverEl.classList.remove('skeleton');
+  heroCoverEl.style.fontSize = '';
+  heroCoverEl.textContent = coverEmoji(r.id);   // emoji always behind
+  heroCoverEl.insertAdjacentHTML('beforeend', coverImg(r.cover_url, r.id));
+
+  document.getElementById('heroType').textContent = r.type.toUpperCase();
+
+  const titleEl = document.getElementById('heroTitle');
+  titleEl.textContent = r.title;
+  titleEl.className = 'today-title';
+  titleEl.style = '';
+
+  const artistEl = document.getElementById('heroArtist');
+  artistEl.textContent = r.artist;
+  artistEl.className = 'today-artist';
+  artistEl.style = '';
+
+  document.getElementById('heroMeta').innerHTML = `
+    <span>${r.genre}</span>
+    <span>${r.duration||''}</span>
+    <span>${r.label||''}</span>
+  `;
+  document.getElementById('heroTags').innerHTML =
+    (r.tags||[]).map(t=>`<span class="genre-tag">${t}</span>`).join('');
+
+  refreshHeroRating();
+
+  // Build star widget
+  const starsEl = document.getElementById('heroStars');
+  starsEl.innerHTML = '';
+  const voted = votedLocally(r.id);
+  if (voted) {
+    document.getElementById('heroVotedMsg').classList.add('show');
+    buildStars('heroStars', { size:1.6, disabled:true });
+  } else {
+    heroStarWidget = buildStars('heroStars', {
+      size: 1.6,
+      onSelect: async (stars) => {
+        try {
+          const res = await api('/ratings', {
+            method: 'POST',
+            body: JSON.stringify({ release_id: r.id, score: stars }),
+          });
+          markVotedLocally(r.id);
+          heroRelease = res.release;
+          document.getElementById('heroVotedMsg').classList.add('show');
+          refreshHeroRating();
+          renderTodayGrid();
+          showToast('Rating submitted!', 'success');
+        } catch(e) {
+          if (e.message === 'You have already rated this release.') {
+            markVotedLocally(r.id);
+            document.getElementById('heroVotedMsg').classList.add('show');
+          }
+          showToast(e.message, 'error');
+        }
+      }
+    });
+  }
+}
+
+function refreshHeroRating() {
+  if (!heroRelease) return;
+  document.getElementById('heroScore').textContent  = heroRelease.avg_score != null ? heroRelease.avg_score.toFixed(1) : '—';
+  document.getElementById('heroVotes').textContent  = `${heroRelease.vote_count} votes`;
+}
+
+function renderTodayGrid() {
+  const grid = document.getElementById('todayGrid');
+  if (!todayReleases.length) {
+    grid.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:0.75rem;color:var(--muted);">No releases today.</div>';
+    return;
+  }
+  const topId = heroRelease?.id;
+  grid.innerHTML = todayReleases.map(r => `
+    <div class="release-card ${r.id===topId?'top-pick':''}" onclick="openModal('${r.id}')">
+      ${r.id===topId ? '<div class="top-badge">Top Today</div>' : ''}
+      <div class="card-cover-placeholder">${coverEmoji(r.id)}${coverImg(r.cover_url, r.id)}</div>
+      <div class="card-type">${r.type}</div>
+      <div class="card-title">${r.title}</div>
+      <div class="card-artist">${r.artist}</div>
+      <div class="card-rating">
+        <div class="mini-stars">${r.avg_score!=null?renderMiniStars(r.avg_score):'☆☆☆☆☆'}</div>
+        <div class="card-score">${r.avg_score!=null?r.avg_score.toFixed(1):'—'}</div>
+        <div class="card-votes">${r.vote_count}v</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+loadTodaySection();
+
+// ─────────────────────────────────────────────────────────────────────────
+//  CALENDAR
+// ─────────────────────────────────────────────────────────────────────────
+let calDate     = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+let selectedDay = null;
+let monthCache  = {};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+async function loadMonth() {
+  const key = `${calDate.getFullYear()}-${pad(calDate.getMonth()+1)}`;
+  if (!monthCache[key]) {
+    monthCache[key] = await api(`/releases?month=${key}`);
+  }
+  return monthCache[key];
+}
+
+async function renderCalendar() {
+  const y = calDate.getFullYear(), m = calDate.getMonth();
+  document.getElementById('monthTitle').textContent = `${MONTHS[m]} ${y}`;
+
+  const releases = await loadMonth();
+  document.getElementById('monthTotal').textContent = releases.length;
+
+  // Group by date
+  const byDate = {};
+  for (const r of releases) {
+    if (!byDate[r.release_date]) byDate[r.release_date] = [];
+    byDate[r.release_date].push(r);
+  }
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow'; el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDow    = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const tY=TODAY.getFullYear(), tM=TODAY.getMonth(), tD=TODAY.getDate();
+
+  for (let i=0; i<firstDow; i++) {
+    const el = document.createElement('div'); el.className='cal-day empty'; grid.appendChild(el);
+  }
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateKey = `${y}-${pad(m+1)}-${pad(d)}`;
+    const dayRels = byDate[dateKey]||[];
+    const isToday = (y===tY && m===tM && d===tD);
+    const isSel   = selectedDay===dateKey;
+
+    const el = document.createElement('div');
+    el.className = 'cal-day'+(isToday?' today':'')+(dayRels.length?' has-releases':'')+(isSel?' selected':'');
+    el.innerHTML = `
+      <div class="day-num">${d}</div>
+      ${dayRels.length?`<div class="release-dots">${dayRels.slice(0,6).map(()=>'<span class="release-dot"></span>').join('')}</div>`:'' }
+      ${dayRels.length?`<div class="rel-count">${dayRels.length} release${dayRels.length>1?'s':''}</div>`:''}
+    `;
+    if (dayRels.length) {
+      el.addEventListener('click', () => {
+        if (selectedDay===dateKey) { selectedDay=null; document.getElementById('dayPanel').innerHTML=''; }
+        else { selectedDay=dateKey; renderDayPanel(dayRels, dateKey); }
+        renderCalendar();
+      });
+    }
+    grid.appendChild(el);
+  }
+
+  if (selectedDay && byDate[selectedDay]) renderDayPanel(byDate[selectedDay], selectedDay);
+  else if (!byDate[selectedDay]) { document.getElementById('dayPanel').innerHTML=''; selectedDay=null; }
+}
+
+function renderDayPanel(releases, dateKey) {
+  const d = new Date(dateKey+'T00:00:00');
+  const label = d.toLocaleDateString('en-US',{ weekday:'long', month:'long', day:'numeric' });
+
+  document.getElementById('dayPanel').innerHTML = `
+    <div class="day-panel">
+      <div class="day-panel-header">
+        <div class="day-panel-title">${label}</div>
+        <button class="close-btn" onclick="closePanel()">✕</button>
+      </div>
+      <div class="day-panel-list">
+        ${releases.map(r=>`
+          <div class="panel-release">
+            <div class="panel-cover-placeholder">${coverEmoji(r.id)}${coverImg(r.cover_url, r.id)}</div>
+            <div class="panel-info">
+              <div class="panel-title">${r.title}</div>
+              <div class="panel-artist">${r.artist} · <span style="color:var(--amber-dim)">${r.type}</span> · ${r.genre}</div>
+            </div>
+            <div class="panel-right">
+              <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--amber);">
+                ${r.avg_score!=null?r.avg_score.toFixed(1):'—'}<span style="font-size:0.65rem;color:var(--muted)">/10</span>
+              </div>
+              <button class="panel-btn" onclick="openModal('${r.id}')">
+                ${votedLocally(r.id)?'✓ Rated':'Rate'}
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function closePanel() {
+  selectedDay=null; document.getElementById('dayPanel').innerHTML=''; renderCalendar();
+}
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()-1); selectedDay=null; document.getElementById('dayPanel').innerHTML=''; renderCalendar(); });
+document.getElementById('nextMonth').addEventListener('click', ()=>{ calDate.setMonth(calDate.getMonth()+1); selectedDay=null; document.getElementById('dayPanel').innerHTML=''; renderCalendar(); });
+
+renderCalendar();
+
+// ─────────────────────────────────────────────────────────────────────────
+//  MODAL
+// ─────────────────────────────────────────────────────────────────────────
+let modalRel = null;
+let modalStars;
+
+async function openModal(id) {
+  try {
+    modalRel = await api(`/releases/${id}`);
+  } catch(e) {
+    showToast('Could not load release.', 'error'); return;
+  }
+
+  const modalCoverEl = document.getElementById('modalCover');
+  modalCoverEl.textContent = coverEmoji(modalRel.id);
+  // Remove any previous img
+  modalCoverEl.querySelector('img')?.remove();
+  if (modalRel.cover_url) {
+    const img = document.createElement('img');
+    img.src = modalRel.cover_url;
+    img.alt = 'cover';
+    img.loading = 'lazy';
+    img.onerror = () => img.style.display = 'none';
+    modalCoverEl.appendChild(img);
+  }
+  document.getElementById('modalTitle').textContent  = modalRel.title;
+  document.getElementById('modalArtist').textContent = modalRel.artist;
+  document.getElementById('modalMeta').textContent   = [modalRel.type, modalRel.release_date, modalRel.genre, modalRel.label].filter(Boolean).join(' · ');
+
+  refreshModalRating();
+
+  const voted = votedLocally(modalRel.id);
+  document.getElementById('modalVotedMsg').classList.toggle('show', voted);
+  document.getElementById('modalSubmit').disabled = true;
+
+  if (voted) {
+    buildStars('modalStars', { size: 2.2, disabled: true });
+  } else {
+    const widget = buildStars('modalStars', {
+      size: 2.2,
+      onSelect: (i) => {
+        document.getElementById('modalSubmit').disabled = false;
+      }
+    });
+    document.getElementById('modalSubmit').onclick = async ()=>{
+      const sel = widget.getSel();
+      if (!sel) return;
+      try {
+        const res = await api('/ratings',{ method:'POST', body:JSON.stringify({ release_id:modalRel.id, score:sel }) });
+        markVotedLocally(modalRel.id);
+        modalRel = res.release;
+        document.getElementById('modalVotedMsg').classList.add('show');
+        document.getElementById('modalSubmit').disabled=true;
+        refreshModalRating();
+        // Refresh today section if needed
+        if (modalRel.release_date===todayStr) loadTodaySection();
+        // Refresh month cache & re-render panel
+        const key=`${calDate.getFullYear()}-${pad(calDate.getMonth()+1)}`;
+        delete monthCache[key];
+        renderCalendar();
+        showToast('Rating submitted!','success');
+      } catch(e) {
+        if (e.message==='You have already rated this release.') {
+          markVotedLocally(modalRel.id);
+          document.getElementById('modalVotedMsg').classList.add('show');
+        }
+        showToast(e.message,'error');
+      }
+    };
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function refreshModalRating() {
+  if (!modalRel) return;
+  document.getElementById('modalScore').textContent     = modalRel.avg_score!=null?modalRel.avg_score.toFixed(1):'—';
+  document.getElementById('modalVoteCount').textContent = `(${modalRel.vote_count} votes)`;
+}
+
+document.getElementById('modalClose').addEventListener('click', ()=>document.getElementById('modalOverlay').classList.remove('open'));
+document.getElementById('modalOverlay').addEventListener('click', e=>{ if(e.target===document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('open'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.getElementById('modalOverlay').classList.remove('open'); });
+
+// ─────────────────────────────────────────────────────────────────────────
+//  ADMIN PANEL — Add Release
+// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+//  SYNC PANEL
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────
+//  ADMIN PANEL — Add Release (manual)
+// ─────────────────────────────────────────────────────────────────────────
+document.getElementById('adminToggle').addEventListener('click', ()=>{
+  const p = document.getElementById('adminPanel');
+  p.classList.toggle('open');
+  // Pre-fill date to today
+  if (!document.getElementById('f-date').value)
+    document.getElementById('f-date').value = todayStr;
+});
+
+document.getElementById('formSubmit').addEventListener('click', async ()=>{
+  const title        = document.getElementById('f-title').value.trim();
+  const artist       = document.getElementById('f-artist').value.trim();
+  const type         = document.getElementById('f-type').value;
+  const release_date = document.getElementById('f-date').value;
+  const genre        = document.getElementById('f-genre').value.trim();
+  const tags         = document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const label        = document.getElementById('f-label').value.trim()||undefined;
+  const duration     = document.getElementById('f-duration').value.trim()||undefined;
+
+  if (!title||!artist||!release_date||!genre) { showToast('Fill in all required fields','error'); return; }
+
+  try {
+    await api('/releases',{ method:'POST', body:JSON.stringify({ title,artist,type,release_date,genre,tags,label,duration }) });
+    showToast(`"${title}" added!`,'success');
+    // Clear form
+    ['f-title','f-artist','f-genre','f-tags','f-label','f-duration'].forEach(id=>document.getElementById(id).value='');
+    // Refresh
+    const key=`${calDate.getFullYear()}-${pad(calDate.getMonth()+1)}`;
+    delete monthCache[key];
+    await loadTodaySection();
+    renderCalendar();
+    document.getElementById('adminPanel').classList.remove('open');
+  } catch(e) {
+    showToast(e.message,'error');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+//  SEARCH & FILTER
+// ─────────────────────────────────────────────────────────────────────────
+const SEARCH_LIMIT = 48;
+let searchOffset   = 0;
+let searchTotal    = 0;
+let searchPending  = false;
+let searchDebounce = null;
+
+// Populate genre dropdown from DB
+async function loadGenres() {
+  try {
+    const genres = await api('/genres');
+    const sel    = document.getElementById('filterGenre');
+    genres.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g; opt.textContent = g;
+      sel.appendChild(opt);
+    });
+  } catch(_) {}
+}
+
+// Populate year dropdown (current year down to 2020)
+function loadYears() {
+  const sel  = document.getElementById('filterYear');
+  const year = new Date().getFullYear();
+  for (let y = year; y >= 2020; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+}
+
+function getFilters() {
+  return {
+    q:     document.getElementById('searchQ').value.trim(),
+    genre: document.getElementById('filterGenre').value,
+    type:  document.getElementById('filterType').value,
+    year:  document.getElementById('filterYear').value,
+    sort:  document.getElementById('filterSort').value,
+  };
+}
+
+function hasActiveFilters() {
+  const f = getFilters();
+  return f.q || f.genre !== 'all' || f.type !== 'all' || f.year || f.sort !== 'date_desc';
+}
+
+function searchCardHTML(r) {
+  const isTop = false;
+  return `
+    <div class="release-card" onclick="openModal('${r.id}')">
+      <div class="card-cover-placeholder">${coverEmoji(r.id)}${coverImg(r.cover_url, r.id)}</div>
+      <div class="card-type">${r.type}</div>
+      <div class="card-title">${r.title}</div>
+      <div class="card-artist">${r.artist}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:0.3rem;">${r.release_date}</div>
+      <div class="card-rating">
+        <div class="mini-stars">${r.avg_score != null ? renderMiniStars(r.avg_score) : '☆☆☆☆☆'}</div>
+        <div class="card-score">${r.avg_score != null ? r.avg_score.toFixed(1) : '—'}</div>
+        <div class="card-votes">${r.vote_count}v</div>
+      </div>
+    </div>`;
+}
+
+async function runSearch(append = false) {
+  if (searchPending) return;
+  searchPending = true;
+
+  const f      = getFilters();
+  const offset = append ? searchOffset : 0;
+  if (!append) searchOffset = 0;
+
+  const params = new URLSearchParams({
+    limit: SEARCH_LIMIT,
+    offset,
+    sort: f.sort,
+  });
+  if (f.q)              params.set('q',     f.q);
+  if (f.genre !== 'all') params.set('genre', f.genre);
+  if (f.type  !== 'all') params.set('type',  f.type);
+  if (f.year)            params.set('year',  f.year);
+
+  const grid       = document.getElementById('searchGrid');
+  const metaEl     = document.getElementById('resultsMeta');
+  const countEl    = document.getElementById('resultsCount');
+  const moreWrap   = document.getElementById('loadMoreWrap');
+  const moreBtn    = document.getElementById('loadMoreBtn');
+
+  if (!append) {
+    grid.innerHTML = '<div style="padding:2rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--muted);">Searching…</div>';
+  } else {
+    moreBtn.disabled = true;
+    moreBtn.textContent = 'Loading…';
+  }
+
+  try {
+    const data = await api(`/search?${params}`);
+    searchTotal  = data.total;
+    searchOffset = offset + data.results.length;
+
+    if (!append) {
+      grid.innerHTML = data.results.length
+        ? data.results.map(searchCardHTML).join('')
+        : `<div class="no-results">No releases found. Try different filters.</div>`;
+    } else {
+      if (data.results.length) {
+        grid.insertAdjacentHTML('beforeend', data.results.map(searchCardHTML).join(''));
+      }
+    }
+
+    // Results meta
+    const active = hasActiveFilters();
+    metaEl.style.display = active ? 'flex' : 'none';
+    if (active) {
+      countEl.textContent = `${searchTotal.toLocaleString()} result${searchTotal !== 1 ? 's' : ''}`;
+    }
+
+    // Load more button
+    const hasMore = searchOffset < searchTotal;
+    moreWrap.style.display = hasMore ? 'block' : 'none';
+    if (hasMore) {
+      moreBtn.disabled    = false;
+      moreBtn.textContent = `Load more (${searchTotal - searchOffset} remaining)`;
+    }
+
+  } catch(e) {
+    if (!append) grid.innerHTML = `<div class="no-results">Search failed: ${e.message}</div>`;
+  } finally {
+    searchPending = false;
+  }
+}
+
+// Debounced search on input
+['searchQ'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => runSearch(), 350);
+  });
+});
+
+// Immediate search on filter change
+['filterGenre','filterType','filterYear','filterSort'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => runSearch());
+});
+
+// Load more
+document.getElementById('loadMoreBtn').addEventListener('click', () => runSearch(true));
+
+// Clear filters
+document.getElementById('clearFilters').addEventListener('click', () => {
+  document.getElementById('searchQ').value    = '';
+  document.getElementById('filterGenre').value = 'all';
+  document.getElementById('filterType').value  = 'all';
+  document.getElementById('filterYear').value  = '';
+  document.getElementById('filterSort').value  = 'date_desc';
+  runSearch();
+});
+
+// Init
+loadGenres();
+loadYears();
+runSearch(); // show all releases by default in the browse section
+
+// ─────────────────────────────────────────────────────────────────────────
+//  STATUS POLLER — shows loading banner during backfill
+// ─────────────────────────────────────────────────────────────────────────
+let lastReleaseCount = 0;
+let pollInterval     = null;
+
+async function checkStatus() {
+  try {
+    const s = await api('/status');
+
+    // Update banner
+    const banner = document.getElementById('loadingBanner');
+    const text   = document.getElementById('loadingText');
+    const count  = document.getElementById('loadingCount');
+
+    if (s.state === 'running') {
+      banner.classList.add('show');
+      text.textContent  = s.label.includes('backfill')
+        ? 'Loading real release data from MusicBrainz — this takes ~3 min on first run…'
+        : 'Updating release data…';
+      count.textContent = s.releaseCount > 0 ? `${s.releaseCount} releases loaded so far` : '';
+
+      // Reload page data if new releases appeared
+      if (s.releaseCount > lastReleaseCount + 50) {
+        lastReleaseCount = s.releaseCount;
+        const key = `${calDate.getFullYear()}-${pad(calDate.getMonth()+1)}`;
+        delete monthCache[key];
+        loadTodaySection();
+        renderCalendar();
+      }
+    } else {
+      banner.classList.remove('show');
+
+      // Do a final refresh when done
+      if (s.state === 'done' && s.releaseCount > lastReleaseCount) {
+        lastReleaseCount = s.releaseCount;
+        const key = `${calDate.getFullYear()}-${pad(calDate.getMonth()+1)}`;
+        delete monthCache[key];
+        loadTodaySection();
+        renderCalendar();
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+  } catch(_) {}
+}
+
+// Poll every 8 seconds
+pollInterval = setInterval(checkStatus, 8000);
+checkStatus(); // immediate first check
+</script>
+</body>
+</html>
