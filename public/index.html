@@ -576,16 +576,90 @@
     footer .logo-sm { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); }
     footer .logo-sm span { color: var(--amber); }
 
-    @media (max-width: 800px) {
-      header { padding: 1rem 1.5rem; }
+    /* ─── MOBILE NAV ─── */
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; border: none; cursor: pointer; padding: 4px;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--cream); border-radius: 2px;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .mobile-nav {
+      display: none; position: fixed; inset: 0; top: 56px;
+      background: rgba(13,13,13,0.97); backdrop-filter: blur(12px);
+      flex-direction: column; align-items: center;
+      justify-content: center; gap: 2.5rem; z-index: 99;
+    }
+    .mobile-nav.open { display: flex; animation: fadeUp 0.2s ease; }
+    .mobile-nav a {
+      font-family: 'Playfair Display', serif; font-size: 2rem;
+      font-weight: 700; color: var(--cream); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .mobile-nav a:hover { color: var(--amber); }
+
+    /* Tablet */
+    @media (max-width: 960px) {
+      main { padding: 0 2rem 5rem; }
+      .today-hero { grid-template-columns: 220px 1fr; gap: 2rem; }
+      .cover-wrap { width: 220px; height: 220px; }
+      .today-title { font-size: 2.2rem; }
+      .cal-day { min-height: 58px; }
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      header { padding: 0.9rem 1.2rem; }
+      .logo { font-size: 1.25rem; }
       nav { display: none; }
-      main { padding: 0 1.5rem 4rem; }
-      .today-hero { grid-template-columns: 1fr; gap: 1.5rem; }
-      .cover-wrap { width: 100%; max-width: 260px; height: auto; aspect-ratio: 1; }
-      .today-title { font-size: 2rem; }
+      .hamburger { display: flex; }
+      .date-badge { display: none; }
+      main { padding: 0 1rem 5rem; }
+      section { padding-top: 2.5rem; }
+      .sec-title { font-size: 1.7rem; margin-bottom: 1.2rem; }
+      .today-hero { grid-template-columns: 1fr; gap: 1.2rem; padding: 1.4rem; }
+      .today-hero::before { display: none; }
+      .cover-wrap { width: 100%; max-width: 180px; height: auto; aspect-ratio: 1; margin: 0 auto; }
+      .today-title { font-size: 1.6rem; }
+      .today-artist { font-size: 1rem; }
+      .rating-score { font-size: 2.4rem; }
+      .today-meta { gap: 0.8rem; font-size: 0.65rem; }
+      .today-list-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+      .search-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+      .card-title { font-size: 0.88rem; }
+      .card-artist { font-size: 0.65rem; }
+      .calendar-header { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+      .cal-grid { gap: 2px; }
+      .cal-dow { font-size: 0.55rem; padding: 0.3rem 0; }
+      .cal-day { min-height: 46px; padding: 0.3rem; }
+      .day-num { font-size: 0.65rem; }
+      .rel-count { font-size: 0.5rem; }
+      .release-dot { width: 4px; height: 4px; }
+      .day-panel-list { padding: 0.8rem 1rem; gap: 0.5rem; }
+      .panel-release { gap: 0.6rem; padding: 0.6rem; }
+      .panel-cover-placeholder { width: 42px; height: 42px; font-size: 1.1rem; }
+      .filter-bar { gap: 0.5rem; }
+      .search-input-wrap { min-width: 100%; order: -1; }
+      .filter-select { flex: 1; min-width: calc(50% - 0.25rem); font-size: 0.68rem; }
+      .sort-select { min-width: 100%; }
       .form-grid { grid-template-columns: 1fr; }
-      .sync-grid { grid-template-columns: 1fr; }
-      footer { padding: 1.5rem; flex-direction: column; gap: 0.8rem; text-align: center; }
+      .modal { padding: 1.4rem; }
+      .modal-title { font-size: 1.4rem; }
+      .modal-stars .star { font-size: 1.8rem; }
+      .modal-cover-placeholder { width: 90px; height: 90px; font-size: 2.2rem; }
+      footer { padding: 1.2rem 1rem; flex-direction: column; gap: 0.6rem; text-align: center; font-size: 0.62rem; }
+      .loading-banner { padding: 0.6rem 1rem; font-size: 0.65rem; }
+      .divider { margin: 2rem 0 0; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 380px) {
+      .today-list-grid { grid-template-columns: 1fr; }
+      .search-grid { grid-template-columns: 1fr; }
+      .cal-day { min-height: 38px; }
+      .today-title { font-size: 1.4rem; }
     }
   </style>
 </head>
@@ -606,7 +680,17 @@
     <a href="#search">Browse</a>
   </nav>
   <div class="date-badge" id="headerDate">—</div>
+  <button class="hamburger" id="hamburger" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+
+<!-- MOBILE NAV OVERLAY -->
+<div class="mobile-nav" id="mobileNav">
+  <a href="#today"    onclick="closeMobileNav()">Today</a>
+  <a href="#calendar" onclick="closeMobileNav()">Calendar</a>
+  <a href="#search"   onclick="closeMobileNav()">Browse</a>
+</div>
 
 <main>
   <!-- ── SONG OF TODAY ── -->
@@ -758,8 +842,10 @@
 
     <div class="search-grid" id="searchGrid"></div>
 
-    <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
-      <button class="load-more-btn" id="loadMoreBtn">Load more</button>
+    <!-- Infinite scroll sentinel — when this becomes visible, load next page -->
+    <div id="scrollSentinel" style="height:1px;margin-top:2rem;"></div>
+    <div id="loadingMore" style="display:none;text-align:center;padding:1.5rem;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;">
+      Loading more releases…
     </div>
   </section>
 </main>
@@ -1367,17 +1453,14 @@ async function runSearch(append = false) {
   if (f.type  !== 'all') params.set('type',  f.type);
   if (f.year)            params.set('year',  f.year);
 
-  const grid       = document.getElementById('searchGrid');
-  const metaEl     = document.getElementById('resultsMeta');
-  const countEl    = document.getElementById('resultsCount');
-  const moreWrap   = document.getElementById('loadMoreWrap');
-  const moreBtn    = document.getElementById('loadMoreBtn');
+  const grid    = document.getElementById('searchGrid');
+  const metaEl  = document.getElementById('resultsMeta');
+  const countEl = document.getElementById('resultsCount');
 
   if (!append) {
     grid.innerHTML = '<div style="padding:2rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--muted);">Searching…</div>';
   } else {
-    moreBtn.disabled = true;
-    moreBtn.textContent = 'Loading…';
+    loadingMoreEl.style.display = 'block';
   }
 
   try {
@@ -1402,13 +1485,8 @@ async function runSearch(append = false) {
       countEl.textContent = `${searchTotal.toLocaleString()} result${searchTotal !== 1 ? 's' : ''}`;
     }
 
-    // Load more button
-    const hasMore = searchOffset < searchTotal;
-    moreWrap.style.display = hasMore ? 'block' : 'none';
-    if (hasMore) {
-      moreBtn.disabled    = false;
-      moreBtn.textContent = `Load more (${searchTotal - searchOffset} remaining)`;
-    }
+    // Infinite scroll — hide/show loading indicator
+    loadingMoreEl.style.display = 'none';
 
   } catch(e) {
     if (!append) grid.innerHTML = `<div class="no-results">Search failed: ${e.message}</div>`;
@@ -1430,8 +1508,20 @@ async function runSearch(append = false) {
   document.getElementById(id).addEventListener('change', () => runSearch());
 });
 
-// Load more
-document.getElementById('loadMoreBtn').addEventListener('click', () => runSearch(true));
+// ── Infinite scroll via IntersectionObserver ──
+const scrollSentinel  = document.getElementById('scrollSentinel');
+const loadingMoreEl   = document.getElementById('loadingMore');
+
+const scrollObserver = new IntersectionObserver((entries) => {
+  const entry = entries[0];
+  if (entry.isIntersecting && !searchPending && searchOffset < searchTotal) {
+    runSearch(true);
+  }
+}, {
+  rootMargin: '200px', // start loading 200px before reaching the bottom
+  threshold:  0,
+});
+scrollObserver.observe(scrollSentinel);
 
 // Clear filters
 document.getElementById('clearFilters').addEventListener('click', () => {
@@ -1447,6 +1537,32 @@ document.getElementById('clearFilters').addEventListener('click', () => {
 loadGenres();
 loadYears();
 runSearch(); // show all releases by default in the browse section
+
+// ─────────────────────────────────────────────────────────────────────────
+//  HAMBURGER MENU
+// ─────────────────────────────────────────────────────────────────────────
+const hamburger = document.getElementById('hamburger');
+const mobileNav = document.getElementById('mobileNav');
+
+function closeMobileNav() {
+  mobileNav.classList.remove('open');
+  hamburger.setAttribute('aria-expanded', 'false');
+}
+
+hamburger.addEventListener('click', () => {
+  const isOpen = mobileNav.classList.toggle('open');
+  hamburger.setAttribute('aria-expanded', isOpen);
+});
+
+// Close on outside tap
+mobileNav.addEventListener('click', (e) => {
+  if (e.target === mobileNav) closeMobileNav();
+});
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMobileNav();
+});
 
 // ─────────────────────────────────────────────────────────────────────────
 //  STATUS POLLER — shows loading banner during backfill
